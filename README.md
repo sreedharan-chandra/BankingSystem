@@ -8,20 +8,30 @@ Primary Entity: (Account)
 Account Name
 Balance
  
-Implicit Requirement: 
+**Implicit Requirement:** 
  
 •	Account can't be managed with Name since customer names are no unique, so account number is mandatory
  
-Non Functional Requirements:
+**Non Functional Requirements:**
  
-Security:  Since the application deals with financial stuffs, security is very important.  
+**Security:**  Since the application deals with financial stuffs, security is very important.  
 
 Adding the following steps to ensure that
  
-•	Overall application runs on Https
+•	Overall application runs on Https.
+
 •	Secret/Password is encrypted in database.
 
-Technical Details:
+
+For more security, we can consider the following implementation,
+
+
+•	For Data Protection : Data hashing using MD5 or similar Hash algorithm - the user parameters will be hashed and sent to the server. The API will reform the hash string using the received parameters and ensure it matches to received hash string.
+
+• For Strong Authentication : Two Factor Authentication such as Google Authenticator.
+
+
+**Technical Details:**
 
 The following are the technologies used,
 •	Spring Boot
