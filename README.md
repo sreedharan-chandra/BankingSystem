@@ -1,4 +1,4 @@
-# BankingSystem
+# Banking System
 Requirement: 
  
 To create an application to create a bank account with minimal details and then allow to transfer money from one account to other.
@@ -53,6 +53,9 @@ The following are the technologies used,
 •	Rest web service
 •	JPA
 •	Microsoft SQL Server
+•	Junit
+•	H2 DB (for Junit Testing)
+
 
 ## **Solution:**
 
