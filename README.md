@@ -22,8 +22,23 @@ Adding the following steps to ensure that
 
 •	Secret/Password is encrypted in database.
 
+•	Password policy 
 
-For more security, we can consider the following implementation,
+     •  a digit must occur at least once
+     
+     •  a lower case letter must occur at least once
+     
+     •  an upper case letter must occur at least once
+     
+     •  a special character must occur at least once
+     
+     •  no whitespace allowed in the entire string
+     
+     •  at least 8 characters
+
+
+
+For more security, we can consider the following implementation in future,
 
 
 •	For Data Protection : Data hashing using MD5 or similar Hash algorithm - the user parameters will be hashed and sent to the server. The API will reform the hash string using the received parameters and ensure it matches to received hash string.
