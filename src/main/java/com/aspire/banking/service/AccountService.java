@@ -3,8 +3,9 @@
  */
 package com.aspire.banking.service;
 
-import java.util.Base64;
+import java.math.BigDecimal;
 import java.util.Optional;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -16,7 +17,6 @@ import org.springframework.transaction.annotation.Transactional;
 import com.aspire.banking.dao.AccountDAO;
 import com.aspire.banking.domain.Account;
 import com.aspire.banking.domain.AccountTransfer;
-import com.aspire.banking.exception.AccountLockException;
 import com.aspire.banking.exception.BankTransactionException;
 import com.aspire.banking.utils.AESUtil;
 import com.aspire.banking.utils.AccountConstants;
@@ -26,12 +26,13 @@ import com.aspire.banking.utils.AccountConstants;
  *
  */
 @Service
+
 public class AccountService {
 
 	private static final Log LOGGER = LogFactory.getLog(AccountService.class);
 
 	@Autowired
-	private AccountDAO accountDAO;
+	AccountDAO accountDAO;
 	
 	@Autowired
     private Environment environment;
@@ -42,16 +43,17 @@ public class AccountService {
 	 * @return Optional<Account>
 	 * @throws AccountLockException 
 	 */
-	public Optional<Account> getAccount(long id) throws AccountLockException {
+	public Optional<Account> getAccount(long id) throws BankTransactionException {
 		try {
             return accountDAO.findById(id);
         } catch (Exception ex) {
         	LOGGER.error("Error while transfering the amount." + ex.getMessage());
-            throw new AccountLockException("Deadlock occured. Please retry. " + ex.getMessage());
+            throw new BankTransactionException("Deadlock occured. Please retry. " + ex.getMessage());
         }
 	}
 
 	/**
+	 * Persist to the database
 	 * @param accountObject
 	 * @return Account
 	 * @throws BankTransactionException
@@ -71,7 +73,7 @@ public class AccountService {
 	 * @throws BankTransactionException
 	 * @throws AccountLockException 
 	 */
-	public String getAccountDetails(long id) throws BankTransactionException, AccountLockException {
+	public String getAccountDetails(long id) throws BankTransactionException {
 		Optional<Account> senderAccount = getAccount(id);
 		if (senderAccount.isPresent()) {
 			return senderAccount.get().toString();
@@ -80,20 +82,26 @@ public class AccountService {
 		}
 	}
 
-	/**
+	/** Create Account method
+	 * encrypts the user enter password with secret key to store it in the database
 	 * @param accountObject
 	 * @return
 	 * @throws BankTransactionException
 	 */
 	private Account createAccount(Account accountObject) throws BankTransactionException {
 		if (StringUtils.isNotBlank(accountObject.getSecret())) {
-			String secretKey = environment.getProperty("secret.key");
-			accountObject.setSecret(AESUtil.encrypt(accountObject.getSecret(), secretKey));
-			if (accountObject.getBalance() > -1) {
-				return accountDAO.save(accountObject);
-			} else {
-				LOGGER.error(AccountConstants.INVALID_BALANCE_AMOUNT);
-				throw new BankTransactionException(AccountConstants.PLEASE_ENTER_VALID_BALANCE_AMOUNT);
+			if(accountObject.getSecret().matches(environment.getProperty("password.pattern"))) {
+				String secretKey = environment.getProperty("secret.key");
+				accountObject.setSecret(AESUtil.encrypt(accountObject.getSecret(), secretKey));
+				if (accountObject.getBalance().signum() > -1) {
+					return accountDAO.save(accountObject);
+				} else {
+					LOGGER.error(AccountConstants.INVALID_BALANCE_AMOUNT);
+					throw new BankTransactionException(AccountConstants.PLEASE_ENTER_VALID_BALANCE_AMOUNT);
+				}
+			}else {
+				LOGGER.error(AccountConstants.PASSWORD_POLICY_NOT_MET);
+				throw new BankTransactionException(AccountConstants.PASSWORD_POLICY_NOT_MET);
 			}
 		} else {
 			LOGGER.error(AccountConstants.PLEASE_ENTER_VALID_SECRET_KEY);
@@ -107,7 +115,8 @@ public class AccountService {
 	 * @throws BankTransactionException
 	 * @throws AccountLockException 
 	 */
-	public boolean transferAmount(AccountTransfer accountTransferObject) throws BankTransactionException, AccountLockException {
+	
+	public boolean transferAmount(AccountTransfer accountTransferObject) throws BankTransactionException {
 		if(accountTransferObject.getFromAccount()!=accountTransferObject.getToAccount()) {
 			return doTransaction(accountTransferObject);
 		}else {
@@ -115,14 +124,14 @@ public class AccountService {
 		}
 	}
 
-	/**
+	/** In case of any exception/failure, rollback is enabled
 	 * @param accountTransferObject
 	 * @return
 	 * @throws BankTransactionException
 	 * @throws AccountLockException 
 	 */
 	@Transactional(rollbackFor = Exception.class)
-	private boolean doTransaction(AccountTransfer accountTransferObject) throws AccountLockException,BankTransactionException {
+	public boolean doTransaction(AccountTransfer accountTransferObject) throws BankTransactionException {
 		Account senderAccount = validateSenderAccount(accountTransferObject);
 		Account receiverAccount = validateReceiverAccount(accountTransferObject);
 		return transferAmount(senderAccount, receiverAccount, accountTransferObject.getAmount());
@@ -135,7 +144,7 @@ public class AccountService {
 	 * @throws BankTransactionException
 	 * @throws AccountLockException 
 	 */
-	private Account validateSenderAccount(AccountTransfer accountTransferObject) throws BankTransactionException, AccountLockException {
+	public Account validateSenderAccount(AccountTransfer accountTransferObject) throws BankTransactionException {
 		Optional<Account> senderAccount = null;
 		if (StringUtils.isBlank(accountTransferObject.getSecret())) {
 			throw new BankTransactionException(AccountConstants.INVALID_TRANSACTION_PLEASE_ENTER_VALID_SECRET_KEY);
@@ -145,8 +154,8 @@ public class AccountService {
 				throw new BankTransactionException(AccountConstants.SENDER_ACCOUNT + AccountConstants.IS_INVALID);
 			} else {
 				validateSenderCredentials(accountTransferObject, senderAccount);
-				if (accountTransferObject.getAmount() > 0) {
-					if (accountTransferObject.getAmount() > senderAccount.get().getBalance()) {
+				if (accountTransferObject.getAmount().signum() > 0) {
+					if (accountTransferObject.getAmount().compareTo(senderAccount.get().getBalance()) == 1) {
 						throw new BankTransactionException(AccountConstants.INSUFFICIENT_BALANCE_IN_THE_ACCOUNT
 								+ accountTransferObject.getFromAccount() + AccountConstants.CLOSURE_TAG_STRING);
 					}
@@ -159,12 +168,14 @@ public class AccountService {
 	}
 
 	/**
+	 * Validates the user entered password.
+	 * Decrypts the stored passwords and matches with the user entered password
 	 * 
 	 * @param accountTransferObject
 	 * @param senderAccount
 	 * @throws BankTransactionException
 	 */
-	private void validateSenderCredentials(AccountTransfer accountTransferObject, Optional<Account> senderAccount) throws BankTransactionException {
+	public void validateSenderCredentials(AccountTransfer accountTransferObject, Optional<Account> senderAccount) throws BankTransactionException {
 		String secretKey = environment.getProperty("secret.key");
 		if (!AESUtil.decrypt(senderAccount.get().getSecret(), secretKey).equals(accountTransferObject.getSecret())) {
 			throw new BankTransactionException(AccountConstants.INVALID_TRANSACTION_PLEASE_ENTER_VALID_SECRET_KEY);
@@ -178,7 +189,7 @@ public class AccountService {
 	 * @throws BankTransactionException
 	 * @throws AccountLockException 
 	 */
-	private Account validateReceiverAccount(AccountTransfer accountTransferObject) throws BankTransactionException, AccountLockException {
+	public Account validateReceiverAccount(AccountTransfer accountTransferObject) throws BankTransactionException {
 		Optional<Account> receiverAccount = getAccount(accountTransferObject.getToAccount());
 		if (!receiverAccount.isPresent()) {
 			throw new BankTransactionException(AccountConstants.RECEIVER_ACCOUNT + AccountConstants.IS_INVALID);
@@ -193,13 +204,13 @@ public class AccountService {
 	 * @return
 	 * @throws BankTransactionException
 	 */
-	private boolean transferAmount(Account senderAccount,
-			Account receiverAccount, double amount) throws BankTransactionException {
+	public boolean transferAmount(Account senderAccount,
+			Account receiverAccount, BigDecimal amount) throws BankTransactionException {
 		try {
-			Double senderBalanceAmount = senderAccount.getBalance();
-			Double receiverBalanceAmount = receiverAccount.getBalance();
-			senderBalanceAmount = senderBalanceAmount - amount;
-			receiverBalanceAmount = receiverBalanceAmount + amount;
+			BigDecimal senderBalanceAmount = senderAccount.getBalance();
+			BigDecimal receiverBalanceAmount = receiverAccount.getBalance();
+			senderBalanceAmount = senderBalanceAmount.subtract(amount);
+			receiverBalanceAmount = receiverBalanceAmount.add(amount);
 			senderAccount.setBalance(senderBalanceAmount);
 			receiverAccount.setBalance(receiverBalanceAmount);
 			accountDAO.save(senderAccount);

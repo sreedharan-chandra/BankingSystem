@@ -18,6 +18,7 @@ public class ApplicationMain {
 		SpringApplication.run(ApplicationMain.class, args);
 	}
 
+	
 	@Bean
     public ServletWebServerFactory servletContainer() {
         TomcatServletWebServerFactory tomcat = new TomcatServletWebServerFactory() {

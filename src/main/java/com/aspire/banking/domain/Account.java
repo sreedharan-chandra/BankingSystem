@@ -1,5 +1,6 @@
 package com.aspire.banking.domain;
 
+import java.math.BigDecimal;
 import java.util.Base64;
 
 import javax.persistence.Column;
@@ -16,13 +17,13 @@ public class Account {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", updatable = false, nullable = false)
-    private Long id;
+    private long id;
  
     @Column(name = "name", length = 128, nullable = false)
     private String fullName;
  
     @Column(name = "balance", nullable = false)
-    private double balance;
+    private BigDecimal balance;
     
     @Column(name = "secret", nullable = false)
     private String secret;
@@ -43,11 +44,11 @@ public class Account {
         this.fullName = fullName;
     }
  
-    public double getBalance() {
+    public BigDecimal getBalance() {
         return balance;
     }
  
-    public void setBalance(double balance) {
+    public void setBalance(BigDecimal balance) {
         this.balance = balance;
     }
 

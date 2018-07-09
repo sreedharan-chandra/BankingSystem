@@ -21,7 +21,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.aspire.banking.domain.Account;
 import com.aspire.banking.domain.AccountTransfer;
-import com.aspire.banking.exception.AccountLockException;
 import com.aspire.banking.exception.BankTransactionException;
 import com.aspire.banking.service.AccountService;
 import com.aspire.banking.utils.AccountConstants;
@@ -43,12 +42,22 @@ public class AccountController {
 	@Autowired
     private Environment environment;
 
+	/**
+	 * Home page
+	 * @param model
+	 * @return
+	 */
 	@RequestMapping(value = AccountConstants.HOME_URL, method = RequestMethod.GET)
 	public String viewSendMoneyPage(Model model) {
 		LOGGER.info(AccountConstants.WELCOME_TO_BANKING_SYSTEM);
 		return AccountConstants.WELCOME_TO_BANKING_SYSTEM;
 	}
 	
+	/**
+	 * This method initiate the process to get the account details
+	 * @param id
+	 * @return
+	 */
 	@RequestMapping(value = AccountConstants.ID_URL_STRING, method = RequestMethod.GET)
 	@ResponseBody
 	public ResponseEntity<String> getAccount(@PathVariable(AccountConstants.ID_PATH_VARIABLE) long id) {
@@ -63,7 +72,11 @@ public class AccountController {
 		}
 	}
 	
-	
+	/**
+	 * This methods initiate the account creation process
+	 * @param payload
+	 * @return
+	 */
 	@RequestMapping(value = AccountConstants.HOME_SLASH_STRING, method = RequestMethod.POST)
 	@ResponseBody
 	public ResponseEntity<String> createAccount(@RequestBody Map<String, Object> payload) {
@@ -82,9 +95,16 @@ public class AccountController {
 		}
 	}
 	
+	/**
+	 * This method initiate the money transfer process.
+	 * In case of any failure, it will re-initiate the process based on maxRetryCount variable
+	 * 
+	 * @param payload
+	 * @return  ResponseEntity<String>
+	 */
 	@RequestMapping(value = AccountConstants.TRANSFER, method = RequestMethod.POST)
 	@ResponseBody
-	public ResponseEntity<String> transferAccount(@RequestBody Map<String, Object> payload) {
+	public ResponseEntity<String> transferMoney(@RequestBody Map<String, Object> payload) {
 		ResponseEntity<String> response = null;
 		try {
 			Gson gson = new Gson();
@@ -101,13 +121,14 @@ public class AccountController {
 					}else {
 						return new ResponseEntity<>(AccountConstants.TRANSACTION_FAILED_PLEASE_TRY_AGAIN, HttpStatus.OK);
 					}
-				} catch (AccountLockException ex) {
+				} catch (BankTransactionException ex) {
 					LOGGER.error("*************************************************************** " + ex.getMessage());
 					response = new ResponseEntity<>(ex.getMessage(), HttpStatus.TOO_MANY_REQUESTS);
 					doRetry = true;
 					++retryCount;
 				} 
 			}while (doRetry && retryCount < maxRetryCount);
+			
 		}
 
 		catch(BankTransactionException ex) {

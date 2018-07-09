@@ -17,6 +17,8 @@ public class AccountConstants {
 	
 	public static final String PLEASE_ENTER_VALID_SECRET_KEY = "Please enter valid secret key.";
 	
+	public static final String PASSWORD_POLICY_NOT_MET = "Please enter valid password. Password must contains a digit, a lower case letter, an upper case letter,a special character(@ # $ % ^ & + =), no whitespace and at least 8 characters. ";
+	
 	public static final String INVALID_AMOUNT_PLEASE_ENTER_VALID_AMOUNT_TO_TRANSFER = "Invalid Amount. Please enter valid amount to transfer.";
 	
 	public static final String INSUFFICIENT_BALANCE_IN_THE_ACCOUNT = "Insufficient Balance in the account<";

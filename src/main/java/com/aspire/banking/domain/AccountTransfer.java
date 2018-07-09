@@ -3,6 +3,7 @@
  */
 package com.aspire.banking.domain;
 
+import java.math.BigDecimal;
 import java.util.Date;
 
 import javax.persistence.Column;
@@ -32,13 +33,13 @@ public class AccountTransfer {
     private Date transactionDate;
  
     @Column(name = "FromAccount", nullable = false)
-    private Long fromAccount;
+    private long fromAccount;
     
     @Column(name = "ToAccount", nullable = false)
-    private Long toAccount;
+    private long toAccount;
     
     @Column(name = "Amount", nullable = false)
-    private double amount;
+    private BigDecimal amount;
     
     private String secret;
 
@@ -66,19 +67,19 @@ public class AccountTransfer {
 		this.fromAccount = fromAccount;
 	}
 
-	public Long getToAccount() {
+	public long getToAccount() {
 		return toAccount;
 	}
 
-	public void setToAccount(Long toAccount) {
+	public void setToAccount(long toAccount) {
 		this.toAccount = toAccount;
 	}
 
-	public double getAmount() {
+	public BigDecimal getAmount() {
 		return amount;
 	}
 
-	public void setAmount(double amount) {
+	public void setAmount(BigDecimal amount) {
 		this.amount = amount;
 	}
 

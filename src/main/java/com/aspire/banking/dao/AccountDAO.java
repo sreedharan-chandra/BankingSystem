@@ -25,6 +25,6 @@ public interface AccountDAO extends CrudRepository<Account, Long>{
 	 */
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Override
-	Optional<Account> findById(Long accountId);
+	Optional<Account> findById(Long id);
 	
 }
